@@ -24,6 +24,23 @@ export function detectPlatform(url) {
 }
 
 /**
+ * @param {string} filePath 
+ * @returns {number}
+ */
+export function getFileSizeInMB(filePath) {
+  try {
+    if (filePath && fs.existsSync(filePath)) {
+      const stats = fs.statSync(filePath);
+      return stats.size / (1024 * 1024);
+    }
+    return 0;
+  } catch (err) {
+    console.error("⚠️ Fayl hajmini o'lchashda xatolik:", err.message);
+    return 0;
+  }
+}
+
+/**
  * @param {string} url 
  * @returns {Promise<{ filePath: string, title: string, platform: string }>}
  */
@@ -38,10 +55,14 @@ export async function downloadMedia(url) {
   const filePrefix = `video_${timestamp}`;
   const outputTemplate = path.join(TEMP_DIR, `${filePrefix}.%(ext)s`);
 
-  const command = `yt-dlp -f "b[ext=mp4]/bv*[ext=mp4]+ba[ext=m4a]/b" --no-warnings -o "${outputTemplate}" "${url}"`;
+  const formatOption = platform === "youtube" 
+    ? `"bv*[height<=720][ext=mp4]+ba[ext=m4a]/b[height<=720][ext=mp4]/b[ext=mp4]/b"`
+    : `"b[ext=mp4]/bv*[ext=mp4]+ba[ext=m4a]/b"`;
+
+  const command = `yt-dlp -f ${formatOption} --no-warnings -o "${outputTemplate}" "${url}"`;
 
   try {
-    console.log(`⬇️  Video yuklab olinmoqda (${platform}): ${url}`);
+    console.log(`⬇️ Video yuklab olinmoqda (${platform}): ${url}`);
     
     await execPromise(command);
 

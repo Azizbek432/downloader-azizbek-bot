@@ -3,7 +3,8 @@ import { supabase } from "./src/config/supabase.js";
 
 async function startServer() {
   try {
-    const { error } = await supabase.from("users").select("id").limit(1);
+    // Supabase ulanishini test qilish (telegram_id bo'yicha)
+    const { error } = await supabase.from("users").select("telegram_id").limit(1);
     if (error) {
       console.error("❌ Supabase ulanishida xatolik:", error.message);
     } else {

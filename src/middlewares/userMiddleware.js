@@ -11,7 +11,7 @@ export async function userMiddleware(ctx, next) {
     }
   } catch (error) {
     console.error("⚠️ userMiddleware xatoligi:", error.message);
+  } finally {
+    return await next();
   }
-
-  return await next();
 }

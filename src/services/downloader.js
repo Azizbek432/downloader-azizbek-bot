@@ -34,9 +34,11 @@ export async function downloadMedia(url) {
     throw new Error("Qo'llab-quvvatlanmaydigan havola! Faqat YouTube va Instagram havolalari o'tadi.");
   }
 
-  const outputTemplate = path.join(TEMP_DIR, `video_${Date.now()}.%(ext)s`);
+  const timestamp = Date.now();
+  const filePrefix = `video_${timestamp}`;
+  const outputTemplate = path.join(TEMP_DIR, `${filePrefix}.%(ext)s`);
 
-  const command = `yt-dlp -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" --no-warnings -o "${outputTemplate}" "${url}"`;
+  const command = `yt-dlp -f "b[ext=mp4]/bv*[ext=mp4]+ba[ext=m4a]/b" --no-warnings -o "${outputTemplate}" "${url}"`;
 
   try {
     console.log(`⬇️  Video yuklab olinmoqda (${platform}): ${url}`);
@@ -44,13 +46,13 @@ export async function downloadMedia(url) {
     await execPromise(command);
 
     const files = fs.readdirSync(TEMP_DIR);
-    const downloadedFile = files.find((file) => file.startsWith(`video_${outputTemplate.split("_")[1].split(".")[0]}`));
+    const downloadedFileName = files.find((file) => file.startsWith(filePrefix));
 
-    if (!downloadedFile) {
+    if (!downloadedFileName) {
       throw new Error("Video yuklandi, lekin vaqtinchalik fayl topilmadi.");
     }
 
-    const fullFilePath = path.join(TEMP_DIR, downloadedFile);
+    const fullFilePath = path.join(TEMP_DIR, downloadedFileName);
 
     return {
       filePath: fullFilePath,
@@ -59,7 +61,7 @@ export async function downloadMedia(url) {
     };
   } catch (error) {
     console.error("❌ downloader.js xatosi:", error.message);
-    throw new Error("Videoni yuklab olishda xatolik yuz berdi. Havola to'g'riligini tekshiring.");
+    throw new Error("Videoni yuklab olishda xatolik yuz berdi. Havola to'g'riligini yoki video ommaga ochiqligini tekshiring.");
   }
 }
 
@@ -68,7 +70,7 @@ export async function downloadMedia(url) {
  */
 export function cleanupFile(filePath) {
   try {
-    if (fs.existsSync(filePath)) {
+    if (filePath && fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
       console.log(`🧹 Vaqtinchalik fayl o'chirildi: ${filePath}`);
     }

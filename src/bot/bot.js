@@ -9,19 +9,25 @@ export const bot = new Bot(process.env.BOT_TOKEN);
 bot.use(userMiddleware);
 
 bot.command("start", (ctx) => {
-  ctx.reply(`Xush kelibsiz, ${ctx.from.first_name}! 🚀\nYouTube yoki Instagram video havolasini yuboring.`);
+  return ctx.reply(
+    `Xush kelibsiz, ${ctx.from.first_name}! 🚀\nYouTube yoki Instagram video havolasini yuboring.`
+  );
 });
 
 bot.on("message:text", async (ctx) => {
-  const text = ctx.message.text;
+  const text = ctx.message.text.trim();
 
-  if (text.startsWith("http://") || text.startsWith("https://")) {
+  if (/^https?:\/\//i.test(text)) {
     const statusMsg = await ctx.reply("⏳ Video yuklab olinmoqda, kuting...");
+    let downloadedFilePath = null;
 
     try {
       const { filePath, platform } = await downloadMedia(text);
+      downloadedFilePath = filePath;
 
-      await ctx.api.editMessageText(ctx.chat.id, statusMsg.message_id, "📤 Video Telegram'ga yuklanmoqda...");
+      await ctx.api
+        .editMessageText(ctx.chat.id, statusMsg.message_id, "📤 Video Telegram'ga yuklanmoqda...")
+        .catch(() => {});
 
       await ctx.replyWithVideo(new InputFile(filePath), {
         caption: `✅ Video muvaffaqiyatli yuklab olindi!\n\n🤖 @${ctx.me.username}`,
@@ -29,14 +35,19 @@ bot.on("message:text", async (ctx) => {
 
       await logDownload(ctx.from.id, text, platform);
 
-      cleanupFile(filePath);
-
-      await ctx.api.deleteMessage(ctx.chat.id, statusMsg.message_id);
+      await ctx.api.deleteMessage(ctx.chat.id, statusMsg.message_id).catch(() => {});
 
     } catch (error) {
-      await ctx.api.editMessageText(ctx.chat.id, statusMsg.message_id, `❌ Xatolik: ${error.message}`);
+      console.error("⚠️ Bot process xatosi:", error.message);
+      await ctx.api
+        .editMessageText(ctx.chat.id, statusMsg.message_id, `❌ Xatolik: ${error.message}`)
+        .catch(() => {});
+    } finally {
+      if (downloadedFilePath) {
+        cleanupFile(downloadedFilePath);
+      }
     }
   } else {
-    ctx.reply("Iltimos, to'g'ri YouTube yoki Instagram havolasini yuboring.");
+    await ctx.reply("Iltimos, to'g'ri YouTube yoki Instagram havolasini yuboring.");
   }
 });

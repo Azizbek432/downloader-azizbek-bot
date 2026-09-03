@@ -11,8 +11,8 @@
   "author": "Azizbek Abdullayev",
   "license": "ISC",
   "dependencies": {
-    "@supabase/supabase-js": "^2.114.0",
-    "dotenv": "^17.4.2",
-    "grammy": "^1.46.0"
+    "@supabase/supabase-js": "^2.48.0",
+    "dotenv": "^16.4.7",
+    "grammy": "^1.35.0"
   }
 }

@@ -1,15 +1,15 @@
 {
   "name": "downloader-azizbek-bot",
   "version": "1.0.0",
-  "description": "",
+  "description": "YouTube and Instagram video downloader Telegram bot",
+  "type": "module",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node index.js",
+    "dev": "node --watch index.js"
   },
-  "keywords": [],
-  "author": "",
+  "author": "Azizbek Abdullayev",
   "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
     "@supabase/supabase-js": "^2.114.0",
     "dotenv": "^17.4.2",

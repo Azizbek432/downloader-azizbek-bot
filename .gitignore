@@ -1,0 +1,20 @@
+# Maxfiy va shaxsiy sozlamalar
+.env
+*.env
+
+# Kutubxonalar va cache
+node_modules/
+npm-debug.log*
+
+# Vaqtincha yuklangan video/audio fayllar
+downloads/
+*.mp4
+*.m4a
+*.webm
+*.mkv
+*.jpg
+*.png
+
+# OS fayllari
+.DS_Store
+Thumbs.db

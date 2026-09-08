@@ -11,6 +11,8 @@ const bot = new Bot(BOT_TOKEN);
 const messages = {
   uz: {
     welcome: (name: string) => `Xush kelibsiz, ${name}! 🚀\n\nYouTube, Instagram yoki TikTok video havolasini yuboring.`,
+    help: "ℹ️ **Yordam**\n\nMenga YouTube, Instagram yoki TikTok video havolasini yuboring, men uni sizga video formatida yuklab beraman.\n\nBuyruqlar:\n/start - Botni qayta yoqish\n/help - Yordam\n/about - Bot haqida",
+    about: "🤖 **Media Downloader Bot**\n\nUshbu bot barcha ommabop tarmoqlardan videolarni tez va sifatli yuklab beradi.\n\nTuzuvchi: @azizbek_dev\nJamoa: CodeNest Community",
     downloading: "⏳ Video yuklab olinmoqda, kuting...",
     success: "✅ Video muvaffaqiyatli yuklab olindi!\n\n🤖 @downloader_azizbek_bot",
     error: "❌ Videoni yuklab bo'lmadi. Havolani tekshirib qayta urinib ko'ring.",
@@ -23,8 +25,19 @@ bot.command("start", async (ctx) => {
   await ctx.reply(messages.uz.welcome(name));
 });
 
+bot.command("help", async (ctx) => {
+  await ctx.reply(messages.uz.help, { parse_mode: "Markdown" });
+});
+
+bot.command("about", async (ctx) => {
+  await ctx.reply(messages.uz.about, { parse_mode: "Markdown" });
+});
+
 bot.on("message:text", async (ctx) => {
   const text = ctx.message.text.trim();
+
+  if (text.startsWith("/")) return;
+
   const isMediaUrl = /(youtube\.com|youtu\.be|instagram\.com|tiktok\.com)/i.test(text);
 
   if (!isMediaUrl) {

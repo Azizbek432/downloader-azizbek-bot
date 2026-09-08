@@ -8,38 +8,16 @@ if (!BOT_TOKEN) {
 
 const bot = new Bot(BOT_TOKEN);
 
-type Language = "uz" | "ru" | "en";
-
 const messages = {
   uz: {
     welcome: (name: string) => `Xush kelibsiz, ${name}! 🚀\n\nIltimos, muloqot tilini tanlang / Пожалуйста, выберите язык / Please select a language:`,
     lang_selected: "🇺🇿 O'zbek tili tanlandi. Video havolasini yuboring (YouTube, Instagram, TikTok)!",
-    help: "ℹ️ **Yordam**\n\nMenga YouTube, Instagram yoki TikTok video havolasini yuboring, men uni sizga video formatida yuklab beraman.\n\nBuyruqlar:\n/start - Botni qayta yoqish va tilni tanlash\n/help - Yordam\n/about - Bot haqida",
+    help: "ℹ️ **Yordam**\n\nMenga YouTube, Instagram yoki TikTok video havolasini yuboring, men uni sizga video formatida yuklab beraman.\n\nBuyruqlar:\n/start - Botni qayta yoqish\n/help - Yordam\n/about - Bot haqida",
     about: "🤖 **Media Downloader Bot**\n\nUshbu bot barcha ommabop tarmoqlardan videolarni tez va sifatli yuklab beradi.\n\nTuzuvchi: @azizbek_dev\nJamoa: CodeNest Community",
-    downloading: "⏳ Video yuklab olinmoqda, kuting...",
+    downloading: "⏳ Video tahlil qilinmoqda va yuklab olinmoqda...",
     success: "✅ Video muvaffaqiyatli yuklab olindi!\n\n🤖 @downloader_azizbek_bot",
-    error: "❌ Videoni yuklab bo'lmadi. Havolani tekshirib qayta urinib ko'ring.",
+    error: (reason: string) => `❌ Videoni yuklab bo'lmadi.\nSabab: ${reason}`,
     invalid_url: "Iltimos, to'g'ri YouTube, Instagram yoki TikTok havolasini yuboring."
-  },
-  ru: {
-    welcome: (name: string) => `Добро пожаловать, ${name}! 🚀\n\nПожалуйста, выберите язык / Please select a language / Iltimos, tilni tanlang:`,
-    lang_selected: "🇷🇺 Выбран русский язык. Отправьте ссылку на видео (YouTube, Instagram, TikTok)!",
-    help: "ℹ️ **Помощь**\n\nОтправьте мне ссылку на видео с YouTube, Instagram или TikTok, и я скачаю его для вас.\n\nКоманды:\n/start - Перезапустить бота и выбрать язык\n/help - Помощь\n/about - О боте",
-    about: "🤖 **Media Downloader Bot**\n\nЭтот бот быстро и качественно скачивает видео из популярных соцсетей.\n\nРазработчик: @azizbek_dev\nСообщество: CodeNest Community",
-    downloading: "⏳ Видео скачивается, подождите...",
-    success: "✅ Видео успешно скачано!\n\n🤖 @downloader_azizbek_bot",
-    error: "❌ Не удалось скачать видео. Проверьте ссылку и попробуйте снова.",
-    invalid_url: "Пожалуйста, отправьте корректную ссылку на YouTube, Instagram или TikTok."
-  },
-  en: {
-    welcome: (name: string) => `Welcome, ${name}! 🚀\n\nPlease select your language / Пожалуйста, выберите язык / Iltimos, tilni tanlang:`,
-    lang_selected: "🇬🇧 English language selected. Send a video link (YouTube, Instagram, TikTok)!",
-    help: "ℹ️ **Help**\n\nSend me a video link from YouTube, Instagram, or TikTok, and I will download it for you.\n\nCommands:\n/start - Restart bot & choose language\n/help - Help\n/about - About bot",
-    about: "🤖 **Media Downloader Bot**\n\nThis bot downloads videos from popular social platforms quickly and in high quality.\n\nDeveloper: @azizbek_dev\nCommunity: CodeNest Community",
-    downloading: "⏳ Downloading video, please wait...",
-    success: "✅ Video downloaded successfully!\n\n🤖 @downloader_azizbek_bot",
-    error: "❌ Failed to download video. Check the link and try again.",
-    invalid_url: "Please send a valid YouTube, Instagram, or TikTok link."
   }
 };
 
@@ -49,73 +27,138 @@ const langKeyboard = new InlineKeyboard()
   .text("🇬🇧 English", "lang_en");
 
 bot.command("start", async (ctx) => {
-  const name = ctx.from?.first_name || "User";
-  await ctx.reply(messages.uz.welcome(name), {
-    reply_markup: langKeyboard,
-  });
+  try {
+    const name = ctx.from?.first_name || "User";
+    await ctx.reply(messages.uz.welcome(name), { reply_markup: langKeyboard });
+  } catch (e) {
+    console.error("[START_ERR]", e);
+  }
 });
 
 bot.callbackQuery(/^lang_(uz|ru|en)$/, async (ctx) => {
-  const lang = ctx.match[1] as Language;
-  await ctx.answerCallbackQuery();
-  await ctx.editMessageText(messages[lang].lang_selected);
+  try {
+    await ctx.answerCallbackQuery();
+    await ctx.editMessageText(messages.uz.lang_selected);
+  } catch (e) {
+    console.error("[CALLBACK_ERR]", e);
+  }
 });
 
 bot.command("help", async (ctx) => {
-  await ctx.reply(messages.uz.help, { parse_mode: "Markdown" });
+  try {
+    await ctx.reply(messages.uz.help, { parse_mode: "Markdown" });
+  } catch (e) {
+    console.error("[HELP_ERR]", e);
+  }
 });
 
 bot.command("about", async (ctx) => {
-  await ctx.reply(messages.uz.about, { parse_mode: "Markdown" });
+  try {
+    await ctx.reply(messages.uz.about, { parse_mode: "Markdown" });
+  } catch (e) {
+    console.error("[ABOUT_ERR]", e);
+  }
 });
 
-bot.on("message:text", async (ctx) => {
-  const text = ctx.message.text.trim();
+const COBALT_INSTANCES = [
+  "https://cobalt.api.scpt.tech",
+  "https://cobalt-api.kwiatekmandarynka.com",
+  "https://co.wuk.sh",
+  "https://api.cobalt.tools"
+];
 
-  if (text.startsWith("/")) return;
+async function fetchFromCobalt(url: string) {
+  let lastError = "Barcha serverlar band yoki javob bermadi";
 
-  const isMediaUrl = /(youtube\.com|youtu\.be|instagram\.com|tiktok\.com)/i.test(text);
+  for (const instance of COBALT_INSTANCES) {
+    const endpoint = instance.endsWith("/") ? instance : `${instance}/`;
+    
+    try {
+      console.log(`[TRYING_INSTANCE] ${endpoint}`);
+      
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/json",
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+          "Origin": "https://cobalt.tools",
+          "Referer": "https://cobalt.tools/"
+        },
+        body: JSON.stringify({
+          url: url,
+          videoQuality: "720",
+          youtubeVideoCodec: "h264",
+          downloadMode: "video"
+        }),
+      });
 
-  if (!isMediaUrl) {
-    await ctx.reply(messages.uz.invalid_url);
-    return;
+      if (!response.ok) {
+        const textErr = await response.text();
+        console.warn(`[INSTANCE_FAILED] ${endpoint}: Status ${response.status}`, textErr);
+        continue;
+      }
+
+      const data = await response.json();
+      console.log(`[COBALT_SUCCESS] Response from ${endpoint}:`, JSON.stringify(data));
+
+      if (data.status === "error") {
+        lastError = data.text || data.error?.code || "Cobalt xatolik qaytardi";
+        continue;
+      }
+
+      let mediaUrl: string | null = null;
+      if (data.url) {
+        mediaUrl = data.url;
+      } else if (data.status === "picker" && Array.isArray(data.picker) && data.picker.length > 0) {
+        mediaUrl = data.picker[0].url;
+      } else if (data.status === "redirect" && data.url) {
+        mediaUrl = data.url;
+      }
+
+      if (mediaUrl) {
+        return mediaUrl;
+      }
+    } catch (err: any) {
+      console.error(`[INSTANCE_ERROR] ${endpoint}`, err?.message || err);
+    }
   }
 
-  const statusMsg = await ctx.reply(messages.uz.downloading);
+  throw new Error(lastError);
+}
 
+bot.on("message:text", async (ctx) => {
   try {
-    const response = await fetch("https://api.cobalt.tools/api/json", {
-      method: "POST",
-      headers: {
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        url: text,
-        videoQuality: "720"
-      }),
+    const text = ctx.message.text.trim();
+    if (text.startsWith("/")) return;
+
+    const isMediaUrl = /(youtube\.com|youtu\.be|instagram\.com|tiktok\.com)/i.test(text);
+    if (!isMediaUrl) {
+      await ctx.reply(messages.uz.invalid_url);
+      return;
+    }
+
+    const statusMsg = await ctx.reply(messages.uz.downloading);
+
+    console.log(`[REQUEST] Processing URL: ${text}`);
+
+    const mediaUrl = await fetchFromCobalt(text);
+
+    console.log(`[SENDING_VIDEO] Direct Media URL: ${mediaUrl}`);
+
+    await ctx.replyWithVideo(mediaUrl, {
+      caption: messages.uz.success,
     });
 
-    const data = await response.json();
-
-    if (data && (data.url || data.picker)) {
-      const mediaUrl = data.url || (data.picker && data.picker[0]?.url);
-      
-      await ctx.replyWithVideo(mediaUrl, {
-        caption: messages.uz.success,
-      });
-      
-      await ctx.api.deleteMessage(ctx.chat.id, statusMsg.message_id);
-    } else {
-      throw new Error("Cobalt API xatolik berdi");
+    await ctx.api.deleteMessage(ctx.chat.id, statusMsg.message_id);
+  } catch (err: any) {
+    console.error("[DOWNLOAD_ERROR]", err);
+    
+    const errReason = err?.message || "Noma'lum xatolik";
+    try {
+      await ctx.reply(messages.uz.error(errReason));
+    } catch (_) {
     }
-  } catch (err) {
-    console.error("Xatolik:", err);
-    await ctx.api.editMessageText(
-      ctx.chat.id,
-      statusMsg.message_id,
-      messages.uz.error
-    );
   }
 });
 
@@ -128,7 +171,10 @@ serve(async (req) => {
     }
     return new Response("🤖 Downloader Bot Edge Function Active!", { status: 200 });
   } catch (err) {
-    console.error("Server Error:", err);
-    return new Response("Internal Server Error", { status: 500 });
+    console.error("[SERVER_CRITICAL]", err);
+    return new Response(JSON.stringify({ error: String(err) }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 });

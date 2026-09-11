@@ -2,6 +2,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { Bot, webhookCallback, InlineKeyboard } from "npm:grammy";
 
 const BOT_TOKEN = Deno.env.get("BOT_TOKEN");
+const BACKEND_URL = Deno.env.get("BACKEND_URL") || "http://127.0.0.1:8000"; 
+
 if (!BOT_TOKEN) {
   throw new Error("BOT_TOKEN topilmadi!");
 }
@@ -10,7 +12,7 @@ const bot = new Bot(BOT_TOKEN);
 
 const messages = {
   uz: {
-    welcome: (name: string) => `Xush kelibsiz, ${name}! 🚀\n\nIltimos, muloqot tilini tanlang / Пожалуйста, выберите язык / Please select a language:`,
+    welcome: (name: string) => `Xush kelibsiz, ${name}! 🚀\n\nIltimos, muloqot tilini tanlang:`,
     lang_selected: "🇺🇿 O'zbek tili tanlandi. Video havolasini yuboring (YouTube, Instagram, TikTok)!",
     help: "ℹ️ **Yordam**\n\nMenga YouTube, Instagram yoki TikTok video havolasini yuboring, men uni sizga video formatida yuklab beraman.\n\nBuyruqlar:\n/start - Botni qayta yoqish\n/help - Yordam\n/about - Bot haqida",
     about: "🤖 **Media Downloader Bot**\n\nUshbu bot barcha ommabop tarmoqlardan videolarni tez va sifatli yuklab beradi.\n\nTuzuvchi: @azizbek_dev\nJamoa: CodeNest Community",
@@ -27,138 +29,78 @@ const langKeyboard = new InlineKeyboard()
   .text("🇬🇧 English", "lang_en");
 
 bot.command("start", async (ctx) => {
-  try {
-    const name = ctx.from?.first_name || "User";
-    await ctx.reply(messages.uz.welcome(name), { reply_markup: langKeyboard });
-  } catch (e) {
-    console.error("[START_ERR]", e);
-  }
-});
-
-bot.callbackQuery(/^lang_(uz|ru|en)$/, async (ctx) => {
-  try {
-    await ctx.answerCallbackQuery();
-    await ctx.editMessageText(messages.uz.lang_selected);
-  } catch (e) {
-    console.error("[CALLBACK_ERR]", e);
-  }
+  const name = ctx.from?.first_name || "User";
+  await ctx.reply(messages.uz.welcome(name), { reply_markup: langKeyboard });
 });
 
 bot.command("help", async (ctx) => {
-  try {
-    await ctx.reply(messages.uz.help, { parse_mode: "Markdown" });
-  } catch (e) {
-    console.error("[HELP_ERR]", e);
-  }
+  await ctx.reply(messages.uz.help, { parse_mode: "Markdown" });
 });
 
 bot.command("about", async (ctx) => {
-  try {
-    await ctx.reply(messages.uz.about, { parse_mode: "Markdown" });
-  } catch (e) {
-    console.error("[ABOUT_ERR]", e);
-  }
+  await ctx.reply(messages.uz.about, { parse_mode: "Markdown" });
 });
 
-const COBALT_INSTANCES = [
-  "https://cobalt.api.scpt.tech",
-  "https://cobalt-api.kwiatekmandarynka.com",
-  "https://co.wuk.sh",
-  "https://api.cobalt.tools"
-];
+bot.callbackQuery(/^lang_(uz|ru|en)$/, async (ctx) => {
+  await ctx.answerCallbackQuery();
+  await ctx.editMessageText(messages.uz.lang_selected);
+});
 
-async function fetchFromCobalt(url: string) {
-  let lastError = "Barcha serverlar band yoki javob bermadi";
+async function fetchFromMyBackend(videoUrl: string) {
+  const encodedUrl = encodeURIComponent(videoUrl);
+  const endpoint = `${BACKEND_URL}/download?url=${encodedUrl}`;
+  
+  console.log(`[BACKEND_REQUEST] Yuborilmoqda: ${endpoint}`);
 
-  for (const instance of COBALT_INSTANCES) {
-    const endpoint = instance.endsWith("/") ? instance : `${instance}/`;
-    
-    try {
-      console.log(`[TRYING_INSTANCE] ${endpoint}`);
-      
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Accept": "application/json",
-          "Content-Type": "application/json",
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-          "Origin": "https://cobalt.tools",
-          "Referer": "https://cobalt.tools/"
-        },
-        body: JSON.stringify({
-          url: url,
-          videoQuality: "720",
-          youtubeVideoCodec: "h264",
-          downloadMode: "video"
-        }),
-      });
-
-      if (!response.ok) {
-        const textErr = await response.text();
-        console.warn(`[INSTANCE_FAILED] ${endpoint}: Status ${response.status}`, textErr);
-        continue;
-      }
-
-      const data = await response.json();
-      console.log(`[COBALT_SUCCESS] Response from ${endpoint}:`, JSON.stringify(data));
-
-      if (data.status === "error") {
-        lastError = data.text || data.error?.code || "Cobalt xatolik qaytardi";
-        continue;
-      }
-
-      let mediaUrl: string | null = null;
-      if (data.url) {
-        mediaUrl = data.url;
-      } else if (data.status === "picker" && Array.isArray(data.picker) && data.picker.length > 0) {
-        mediaUrl = data.picker[0].url;
-      } else if (data.status === "redirect" && data.url) {
-        mediaUrl = data.url;
-      }
-
-      if (mediaUrl) {
-        return mediaUrl;
-      }
-    } catch (err: any) {
-      console.error(`[INSTANCE_ERROR] ${endpoint}`, err?.message || err);
+  const response = await fetch(endpoint, {
+    method: "GET",
+    headers: {
+      "Accept": "application/json"
     }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Backend xatosi: Status ${response.status}`);
   }
 
-  throw new Error(lastError);
+  const data = await response.json();
+
+  if (data.status !== "success" || !data.url) {
+    throw new Error(data.message || "Video havolasini ajratib bo'lmadi");
+  }
+
+  return {
+    mediaUrl: data.url,
+    title: data.title || "Video"
+  };
 }
 
 bot.on("message:text", async (ctx) => {
+  const text = ctx.message.text.trim();
+
+  if (text.startsWith("/")) return;
+
+  const isMediaUrl = /(youtube\.com|youtu\.be|instagram\.com|tiktok\.com)/i.test(text);
+  if (!isMediaUrl) {
+    await ctx.reply(messages.uz.invalid_url);
+    return;
+  }
+
+  const statusMsg = await ctx.reply(messages.uz.downloading);
+
   try {
-    const text = ctx.message.text.trim();
-    if (text.startsWith("/")) return;
-
-    const isMediaUrl = /(youtube\.com|youtu\.be|instagram\.com|tiktok\.com)/i.test(text);
-    if (!isMediaUrl) {
-      await ctx.reply(messages.uz.invalid_url);
-      return;
-    }
-
-    const statusMsg = await ctx.reply(messages.uz.downloading);
-
-    console.log(`[REQUEST] Processing URL: ${text}`);
-
-    const mediaUrl = await fetchFromCobalt(text);
-
-    console.log(`[SENDING_VIDEO] Direct Media URL: ${mediaUrl}`);
+    const { mediaUrl, title } = await fetchFromMyBackend(text);
 
     await ctx.replyWithVideo(mediaUrl, {
-      caption: messages.uz.success,
+      caption: `${messages.uz.success}\n\n📌 **${title}**`,
+      parse_mode: "Markdown"
     });
 
     await ctx.api.deleteMessage(ctx.chat.id, statusMsg.message_id);
   } catch (err: any) {
     console.error("[DOWNLOAD_ERROR]", err);
-    
-    const errReason = err?.message || "Noma'lum xatolik";
-    try {
-      await ctx.reply(messages.uz.error(errReason));
-    } catch (_) {
-    }
+    const errReason = err?.message || "Server bilan bog'lanishda xatolik";
+    await ctx.reply(messages.uz.error(errReason));
   }
 });
 

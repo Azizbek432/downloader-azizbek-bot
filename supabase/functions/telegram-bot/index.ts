@@ -1,14 +1,13 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { Bot, webhookCallback, InlineKeyboard } from "npm:grammy";
 
 const BOT_TOKEN = Deno.env.get("BOT_TOKEN");
-const BACKEND_URL = Deno.env.get("BACKEND_URL") || "http://127.0.0.1:8000"; 
+const BACKEND_URL = Deno.env.get("BACKEND_URL") || "https://downloader-azizbek-bot-backend.onrender.com";
 
 if (!BOT_TOKEN) {
-  throw new Error("BOT_TOKEN topilmadi!");
+  console.error("CRITICAL: BOT_TOKEN topilmadi!");
 }
 
-const bot = new Bot(BOT_TOKEN);
+const bot = new Bot(BOT_TOKEN || "");
 
 const messages = {
   uz: {
@@ -52,27 +51,41 @@ async function fetchFromMyBackend(videoUrl: string) {
   
   console.log(`[BACKEND_REQUEST] Yuborilmoqda: ${endpoint}`);
 
-  const response = await fetch(endpoint, {
-    method: "GET",
-    headers: {
-      "Accept": "application/json"
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 40000);
+
+  try {
+    const response = await fetch(endpoint, {
+      method: "GET",
+      headers: {
+        "Accept": "application/json"
+      },
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      throw new Error(`Backend javob bermadi (Status ${response.status})`);
     }
-  });
 
-  if (!response.ok) {
-    throw new Error(`Backend xatosi: Status ${response.status}`);
+    const data = await response.json();
+
+    if (data.status !== "success" || !data.url) {
+      throw new Error(data.message || "Video havolasini ajratib bo'lmadi");
+    }
+
+    return {
+      mediaUrl: data.url,
+      title: data.title || "Video"
+    };
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    if (err.name === "AbortError") {
+      throw new Error("Server tayyorlanmoqda (Cold Start). Iltimos, 10 soniyadan so'ng qayta urinib ko'ring.");
+    }
+    throw err;
   }
-
-  const data = await response.json();
-
-  if (data.status !== "success" || !data.url) {
-    throw new Error(data.message || "Video havolasini ajratib bo'lmadi");
-  }
-
-  return {
-    mediaUrl: data.url,
-    title: data.title || "Video"
-  };
 }
 
 bot.on("message:text", async (ctx) => {
@@ -106,7 +119,7 @@ bot.on("message:text", async (ctx) => {
 
 const handleWebhook = webhookCallback(bot, "std/http");
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   try {
     if (req.method === "POST") {
       return await handleWebhook(req);
